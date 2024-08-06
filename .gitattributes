@@ -1,2 +1,287 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+#include <iostream>
+#include <cstring> // For strcmp
+#include <windows.h>
+#include <sapi.h>
+#include <string>
+#include <ctime>
+#include <wininet.h>
+#include <fcntl.h>  // For _O_U16TEXT
+#include <io.h>     // For _setmode
+#include <algorithm> // For transform function
+#include <cmath>     // For isnan function
+#include <limits>    // For numeric_limits
+
+using namespace std;
+
+// Function declarations
+void speak(const string& phrase);
+void wishme();
+void datetime();
+string getWeather(const string& city, const string& apiKey);
+void displayWeather(const string& data);
+void playHangman();
+void reciteShayari();
+void handleQuery(const string& query);
+double evaluateExpression(const string& expression);
+
+// Function to speak using text-to-speech
+void speak(const string& phrase) {
+    ISpVoice* pVoice = NULL;
+
+    if (FAILED(::CoInitialize(NULL))) {
+        cout << "Failed to initialize COM library." << endl;
+        return;
+    }
+
+    HRESULT hr = ::CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL, IID_ISpVoice, (void**)&pVoice);
+    if (SUCCEEDED(hr)) {
+        wstring wstr = wstring(phrase.begin(), phrase.end());
+        pVoice->Speak(wstr.c_str(), 0, NULL);
+        pVoice->Release();
+        pVoice = NULL;
+    }
+    else {
+        cout << "Failed to create voice instance." << endl;
+    }
+
+    ::CoUninitialize();
+}
+
+// Function to greet based on time of day
+void wishme() {
+    time_t now = time(0);
+    tm time;
+    localtime_s(&time, &now);
+    if (time.tm_hour < 12) {
+        cout << "Good Morning! How are you today?" << endl;
+        speak("Good Morning! How are you today?");
+    }
+    else if (time.tm_hour >= 12 && time.tm_hour <= 16) {
+        cout << "Good Afternoon! How's your day going?" << endl;
+        speak("Good Afternoon! How's your day going?");
+    }
+    else if (time.tm_hour > 16 && time.tm_hour < 24) {
+        cout << "Good Evening! Hope you had a great day!" << endl;
+        speak("Good Evening! Hope you had a great day!");
+    }
+}
+
+// Function to display current date and time
+void datetime() {
+    time_t now = time(0);
+    char dt[26];
+    ctime_s(dt, sizeof dt, &now);
+    cout << "The date and time is " << endl << dt << endl;
+}
+
+// Function to fetch weather data from OpenWeatherMap API
+string getWeather(const string& city, const string& apiKey) {
+    HINTERNET hInternet = InternetOpen(L"HTTPGET", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (!hInternet) {
+        cout << "InternetOpen failed." << endl;
+        speak("Failed to open internet connection");
+        return "";
+    }
+
+    wstring url = L"http://api.openweathermap.org/data/2.5/weather?q=" + wstring(city.begin(), city.end()) + L"&appid=" + wstring(apiKey.begin(), apiKey.end()) + L"&units=metric";
+    HINTERNET hUrl = InternetOpenUrl(hInternet, url.c_str(), NULL, 0, INTERNET_FLAG_RELOAD, 0);
+    if (!hUrl) {
+        cout << "InternetOpenUrl failed." << endl;
+        speak("Failed to open URL");
+        InternetCloseHandle(hInternet);
+        return "";
+    }
+
+    string result;
+    char buffer[1024];
+    DWORD bytesRead;
+    while (InternetReadFile(hUrl, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+        result.append(buffer, bytesRead);
+    }
+
+    InternetCloseHandle(hUrl);
+    InternetCloseHandle(hInternet);
+
+    return result;
+}
+
+// Function to display weather data
+void displayWeather(const string& data) {
+    cout << "Weather data: " << data << endl;
+    speak("Here is the weather data.");
+}
+
+// Placeholder function for Hangman game
+void playHangman() {
+    cout << "Hangman game functionality placeholder." << endl;
+    speak("Let's play Hangman! Just kidding, it's a placeholder.");
+}
+
+// Function to recite a Shayari (poem)
+void reciteShayari() {
+    _setmode(_fileno(stdout), _O_U16TEXT);
+    wcout << L"Here is a beautiful Urdu Shayari for you:" << endl;
+    wcout << L"Dil ki awaaz ko bhi ishq ki zabaan hogayi" << endl;
+    speak("Here is a beautiful Urdu Shayari for you: Dil ki awaaz ko bhi ishq ki zabaan hogayi");
+}
+
+// Function to handle user queries
+void handleQuery(const string& query) {
+    // Convert query to lowercase for easier handling
+    string lowerQuery = query;
+    transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), ::tolower);
+
+    if (lowerQuery == "hi" || lowerQuery == "hey" || lowerQuery == "hello") {
+        cout << "Hello dear! How can I assist you to00day?" << endl;
+        speak("Hello dear! How can I assist you today?");
+    }
+    else if (lowerQuery == "bye" || lowerQuery == "stop" || lowerQuery == "exit") {
+        cout << "Good Bye! Have a wonderful day!" << endl;
+        speak("Good Bye! Have a wonderful day!");
+        exit(0);
+    }
+    else if (lowerQuery == "who are you" || lowerQuery == "tell me about yourself" || lowerQuery == "about") {
+        cout << "I'm Inertia, your virtual assistant.created by sara and group... I'm here to help you with anything you need!" << endl;
+        speak("I'm Inertia, your virtual assistant.created by sara and group...I'm here to help you with anything you need!");
+    }
+    else if (lowerQuery == "how are you" || lowerQuery == "whatsup" || lowerQuery == "how is your day") {
+        cout << "I'm doing great! How about you?" << endl;
+        speak("I'm doing great! How about you?");
+    }
+    else if (lowerQuery == "time" || lowerQuery == "date") {
+        datetime();
+    }
+    else if (lowerQuery == "open notepad") {
+        cout << "Opening Notepad....." << endl;
+        speak("Opening Notepad");
+        system("start notepad.exe");
+    }
+    else if (lowerQuery == "open google") {
+        cout << "Opening Google....." << endl;
+        speak("Opening Google");
+        system("start https://www.google.com");
+    }
+    else if (lowerQuery == "open youtube") {
+        cout << "Opening YouTube....." << endl;
+        speak("Opening YouTube");
+        system("start https://www.youtube.com");
+    }
+    else if (lowerQuery == "weather") {
+        string city = "Bangalore"; // Replace with desired city
+        string apiKey = "740946ccf1d41d0d399404e9611e00e6"; // Replace with your OpenWeatherMap API key
+        string weatherData = getWeather(city, apiKey);
+        displayWeather(weatherData);
+    }
+    else if (lowerQuery == "play music") {
+        cout << "Sure i can do anything for you! Which song would you like to hear?" << endl;
+        speak("Sure  i can do anything for you! Which song would you like to hear?");
+        char song[100];
+        cin.getline(song, 100);
+        cout << "Playing " << song << "....." << endl;
+        speak("Playing " + string(song));
+        string command = "start https://open.spotify.com/search/" + string(song);
+        system(command.c_str());
+    }
+    else if (lowerQuery == "hangman") {
+        playHangman();
+    }
+    else if (lowerQuery == "shayari") {
+        reciteShayari();
+    }
+    else if (lowerQuery == "calculator") {
+        cout << "Enter an expression i will help you with the problem (e.g., 2 + 3): ";
+        string expression;
+        getline(cin, expression);
+
+        double result = evaluateExpression(expression);
+        if (!isnan(result)) {
+            cout << "Result: " << result << endl;
+            speak("The result is " + to_string(result));
+        }
+        else {
+            cout << "Invalid expression or division by zero!" << endl;
+            speak("Invalid expression or division by zero!");
+        }
+    }
+    else {
+        cout << "I'm sorry, I didn't understand that. Could you please repeat?" << endl;
+        speak("I'm sorry, I didn't understand that. Could you please repeat?");
+    }
+}
+
+// Function to evaluate arithmetic expressions
+double evaluateExpression(const string& expression) {
+    // Implement your expression evaluation logic here
+    // Example implementation:
+    // For simplicity, this example assumes expressions like "2 + 3", "4 * 5", etc.
+    size_t pos = expression.find("+");
+    if (pos != string::npos) {
+        double num1 = stod(expression.substr(0, pos));
+        double num2 = stod(expression.substr(pos + 1));
+        return num1 + num2;
+    }
+
+    pos = expression.find("-");
+    if (pos != string::npos) {
+        double num1 = stod(expression.substr(0, pos));
+        double num2 = stod(expression.substr(pos + 1));
+        return num1 - num2;
+    }
+
+    pos = expression.find("*");
+    if (pos != string::npos) {
+        double num1 = stod(expression.substr(0, pos));
+        double num2 = stod(expression.substr(pos + 1));
+        return num1 * num2;
+    }
+
+    pos = expression.find("/");
+    if (pos != string::npos) {
+        double num1 = stod(expression.substr(0, pos));
+        double num2 = stod(expression.substr(pos + 1));
+        if (num2 != 0) {
+            return num1 / num2;
+        }
+        else {
+            return NAN; // Division by zero
+        }
+    }
+
+    return NAN; // Invalid expression
+}
+
+int main() {
+    cout << "=======================" << endl;
+    cout << "| ENTER YOUR PASSWORD |" << endl;
+    cout << "=======================" << endl << endl;
+    speak("Enter your password");
+
+    char password[20];
+    const char* correct_password = "inertia"; // Replace with your desired password
+
+    cin.getline(password, 20);
+    if (strcmp(password, correct_password) == 0) {
+        cout << "Password accepted! Welcome! Initializing Inertia, your virtual assistant..." << endl;
+        speak("Password accepted! Welcome! Initializing Inertia, your virtual assistant...");
+
+        wishme();
+
+        string query;
+
+        do {
+            cout << "Listening... (Say 'exit' or 'bye' to end)" << endl;
+            speak("Listening... How can I assist you today?");
+
+            getline(cin, query);
+
+            handleQuery(query);
+
+        } while (true);
+    }
+    else {
+        cout << "Incorrect password. Access denied." << endl;
+        speak("Incorrect password. Access denied.");
+    }
+
+    return 0;
+}
